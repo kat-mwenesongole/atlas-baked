@@ -1,6 +1,6 @@
 # Atlas Baked
 
-A simple tool to generate font atlases from TrueType files and export glyph data in a custom `.font` format.
+A small utility for generating font atlases from TrueType files at a specified size, along with a custom .font format containing per-glyph data for easy runtime use.
 
 ---
 

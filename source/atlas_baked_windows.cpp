@@ -29,85 +29,7 @@
 //     Windows will scale the window to 750x750 (DWM scaling).
 //
 
-//
-// ---2160p
-//
-// 9. 2160px
-// 8. 1920px
-// 7. 1680px
-// 6. -
-// 5. 1200px
-// 4. -
-// 3. -
-// 2. -
-// 1. -
-//
-// ---1440p
-//
-// 9. 1440px
-// 8. 1280px
-// 7. 1120px
-// 6. -
-// 5. 800px
-// 4. -
-// 3. -
-// 2. -
-// 1. -
-// 
-// ---1080p
-//
-// 1080px
-//
-// 9. 1080px
-// 8. 960px
-// 7. 840px
-// 6. - 
-// 5. 600px
-// 4. -
-// 3. 360px
-// 2.  -
-// 1. 120px
-//
-// ---720p
-//
-// 9. 720px
-// 8. 640px
-// 7. 560px
-// 6. 480px
-// 5. 400px
-// 4. 320px
-// 3. 240px
-// 2. 160px
-// 1.  80px
-//
-
-// 
-//
-// 2160px =
-// 1920px =
-// 1680px =
-// 1440px =
-// 1280px =
-// 1200px =
-// 1120px =
-// 1080px =
-//  960px =
-//  840px =
-//  800px =
-//  720px =
-//  640px =
-//  600px =
-//  560px =
-//  480px =
-//  400px =
-//  360px =
-//  320px =
-//  240px =
-//  160px =
-//  120px =
-//   80px = 
-//
-//
+// LATIN-1
 
 #include <windows.h>
 #include <shellscalingapi.h>
@@ -189,65 +111,106 @@ struct ttf_name_header
 #define HEADER_FONT_GLYPH_R 16
 #define HEADER_FONT_GLYPH_C 16
 
-#define    FONT_RESOLUTIONS_COUNT 23
-
-global u32 FONT_RESOLUTIONS[FONT_RESOLUTIONS_COUNT] =
+#define FONT_LAYERS 64
+global u32 FONT_RESOLUTIONS[FONT_LAYERS] =
 {
-    80,
-    120,
-    160,
-    240,
-    320,
-    360,
-    400,
-    480,
-    560,
-    600,
-    640,
-    720,
-    800,
-    840,
-    960,
-    1080,
-    1120,
-    1200,
-    1280,
-    1440,
-    1680,
-    1920,
-    2160
+    8, 16, 24, 32, 40, 48, 56, 64,
+    72, 80, 88, 96, 104, 112, 120, 128,
+    136, 144, 152, 160, 168, 176, 184, 192,
+    200, 208, 216, 224, 232, 240, 248, 256,
+    264, 272, 280, 288, 296, 304, 312, 320,
+    328, 336, 344, 352, 360, 368, 376, 384,
+    392, 400, 408, 416, 424, 432, 440, 448,
+    456, 464, 472, 480, 488, 496, 504, 512
 };
 
 #pragma pack(push, 1)
-struct header_font_glyph
+/*
+  struct header_font_glyph
+  {
+  s8  character;
+  s32 offset;
+  s32     spacing;
+  s32 pre_spacing;
+  u32  width;
+  u32 height;
+  r32 u0;
+  r32 u1;
+  r32 v0;
+  r32 v1;
+  };
+  struct header_font
+  {
+  u32   size;
+  u32  width;
+  u32 height;
+  u32 glyph_count;
+  u32 glyph_height;
+  u32 glyph_width;
+  s32 line_spacing;
+  u32 glyph_offset;
+  u32  byte_offset;
+    
+  header_font_glyph glyphs[HEADER_FONT_GLYPH_COUNT];
+  };
+*/
+#pragma pack(pop)
+
+// // // // // // // // KFONT
+#pragma pack(push, 1)
+struct header_kfont_glyph
 {
-    s8  character;
+    s8  character; 
+
+    // METRICS
+    
+    u32  width;
+    u32 height;
+    
     s32 offset;
     s32     spacing;
     s32 pre_spacing;
-    u32  width;
-    u32 height;
+
+    // UV COORDINATES
+    
     r32 u0;
     r32 u1;
     r32 v0;
     r32 v1;
 };
-struct header_font
+#define FONT_CHARSET_LATIN1 233
+
+struct header_kfont
 {
-    u32   size;
-    u32  width;
-    u32 height;
-    u32 glyph_count;
-    u32 glyph_height;
-    u32 glyph_width;
-    s32 line_spacing;
-    u32 glyph_offset;
-    u32  byte_offset;
+    u64   size;
+    // sizeof(header_kfont) + ... + header_kfont_sub
     
-    header_font_glyph glyphs[HEADER_FONT_GLYPH_COUNT];
+    u32 font_count;
+};
+struct header_kfont_sub
+{
+    u64   size;
+    // size = sizeof(header_kfont_sub) + (sizeof(header_kfont_glyph) * CHARSET_COUNT) + (atlas_width * atlas_height * 4)
+    // size = sizeof(header_kfont_sub) + charset_size + atlas_size
+    
+    s32 line_spacing;
+
+    // CHARSET
+
+    u64 charset_size; // sizeof(header_kfont_glyph) * charset_count
+    u64 charset_offset;
+    u32 charset_count;
+    u32 charset_max_height;
+    u32 charset_max_width;
+    
+    // ATLAS
+
+    u64  atlas_size; // atlas_width * atlas_height * 4
+    u64  atlas_offset;
+    u32  atlas_width;
+    u32  atlas_height;
 };
 #pragma pack(pop)
-// // // // // // // // // // // FONT
 
 internal void
 ATLAS_GLYPH_FINDBOUNDS(u32* dib, u32* section,
@@ -283,8 +246,8 @@ ATLAS_GLYPH_FINDBOUNDS(u32* dib, u32* section,
     }
 }
 internal void
-ATLAS_GLYPH_MAKE(header_font_glyph* glyph_info, void* glyph_data, 
-	            s32 pixel_height, u32 atlas_width, s32* max_offset,
+ATLAS_GLYPH_MAKE(header_kfont_glyph* glyph_info, void* glyph_data, 
+		 s32 pixel_height, u32 atlas_width, s32* max_offset,
 		 HFONT* font_handle, HDC* device_context, BITMAPINFO* bitmap_info)
 {
     void* bytes = 0;
@@ -338,15 +301,12 @@ ATLAS_GLYPH_MAKE(header_font_glyph* glyph_info, void* glyph_data,
 	
 	TEXTMETRICA metrics = {};
 	GetTextMetricsA(*device_context, &metrics);
-	glyph_info->offset = max_r - (subsection_height - metrics.tmAscent);
-
 	ABC character_metrics = {};
 	GetCharABCWidthsA(*device_context, (u32)glyph_info->character, (u32)glyph_info->character, &character_metrics);
 	
+	glyph_info->offset      = max_r - (subsection_height - metrics.tmAscent);
 	glyph_info->    spacing = character_metrics.abcC;
 	glyph_info->pre_spacing = character_metrics.abcA;
-
-	// DELETE
 
 	DeleteObject(bitmap_handle);
     }
@@ -355,14 +315,14 @@ ATLAS_GLYPH_MAKE(header_font_glyph* glyph_info, void* glyph_data,
 	OutputDebugStringA("'CreateDIBSection' failed!\n");
     }
 }
-internal header_font*
-ATLAS_FONT_MAKE(s8* TTF_FILE, s8* FONT_NAME, u64* atlas_size, u32 px, u32 pt)
+internal header_kfont_sub*
+ATLAS_FONT_MAKE(s8* TTF_FILE, s8* FONT_NAME, u64* atlas_size, u32 PX_HEIGHT)
 {
-    header_font* header = 0;
+    header_kfont_sub* header = 0;
     
     AddFontResourceExA(TTF_FILE, FR_PRIVATE, 0);
 
-    HFONT font_handle = CreateFontA(-MulDiv(pt, GetDeviceCaps(GetDC(0), LOGPIXELSY), 72), 0, 0, 0,
+    HFONT font_handle = CreateFontA(PX_HEIGHT, 0, 0, 0,
 				    FW_NORMAL,   // weight
 				    FALSE,       // italic
 				    FALSE,       // underline
@@ -383,26 +343,28 @@ ATLAS_FONT_MAKE(s8* TTF_FILE, s8* FONT_NAME, u64* atlas_size, u32 px, u32 pt)
 
 	    BITMAPINFO bitmap_info              = {};
 	    bitmap_info.bmiHeader.biSize        =  sizeof(bitmap_info.bmiHeader);
-	    bitmap_info.bmiHeader.biWidth       =  px*2;
-	    bitmap_info.bmiHeader.biHeight      =  px*2; // (+) bottom-up, (-) top-down
+	    bitmap_info.bmiHeader.biWidth       =  PX_HEIGHT*2;
+	    bitmap_info.bmiHeader.biHeight      =  PX_HEIGHT*2; // (+) bottom-up, (-) top-down
 	    bitmap_info.bmiHeader.biPlanes      =  1;
 	    bitmap_info.bmiHeader.biBitCount    =  32;
 	    bitmap_info.bmiHeader.biCompression =  BI_RGB;
 
 	    // CREATE FILE FORMAT
 
-	    *atlas_size = sizeof(header_font) + ((px*HEADER_FONT_GLYPH_C) * (px*HEADER_FONT_GLYPH_R) * 4);
+	    *atlas_size = sizeof(header_kfont_sub) + ((PX_HEIGHT*HEADER_FONT_GLYPH_C) * (PX_HEIGHT*HEADER_FONT_GLYPH_R) * 4) + (HEADER_FONT_GLYPH_COUNT * sizeof(header_kfont_glyph));
 	    
-	    header = (header_font*)VirtualAlloc(0, *atlas_size, MEM_COMMIT, PAGE_READWRITE);
+	    header = (header_kfont_sub*)VirtualAlloc(0, *atlas_size, MEM_COMMIT, PAGE_READWRITE);
 
-	    header->glyph_width  = px; // max_glyphwidth
-	    header->glyph_height = px; // max_glyphheight
-	    header->width        = header->glyph_width * HEADER_FONT_GLYPH_C;
-	    header->height       = header->glyph_height * HEADER_FONT_GLYPH_R;
-	    header->size         = *atlas_size;
-	    header->glyph_count  = HEADER_FONT_GLYPH_COUNT;
-	    header->glyph_offset = 9 * sizeof(u32);
-	    header->byte_offset  = sizeof(header_font);
+	    header->charset_max_width  = PX_HEIGHT; 
+	    header->charset_max_height = PX_HEIGHT;
+	    header->atlas_width        = header->charset_max_width  * HEADER_FONT_GLYPH_C;
+	    header->atlas_height       = header->charset_max_height * HEADER_FONT_GLYPH_R;
+	    header->size               = *atlas_size;
+	    header->charset_count      = HEADER_FONT_GLYPH_COUNT;
+	    header->charset_size       = sizeof(header_kfont_glyph) * header->charset_count;
+	    header->charset_offset     = sizeof(header_kfont_sub);
+	    header->atlas_offset       = sizeof(header_kfont_sub) + header->charset_size;
+	    header->atlas_size         = 4 * header->atlas_height * header->atlas_width;
 	    
 	    TEXTMETRIC metrics = {};
 	    GetTextMetrics(device_context, &metrics);
@@ -410,11 +372,12 @@ ATLAS_FONT_MAKE(s8* TTF_FILE, s8* FONT_NAME, u64* atlas_size, u32 px, u32 pt)
 
 	    s32 max_offset = 0;
 	    
-	    s8* bytes = (s8*)header + header->byte_offset;
+	    s8* bytes = (s8*)header + header->atlas_offset;
 
+	    header_kfont_glyph* glyphs = (header_kfont_glyph*)((s8*)header + sizeof(header_kfont_sub));
 	    for(u32 character = 32; character < 256; character++) // ' '(32) -> 'ÿ'(255)
 	    {
-		header_font_glyph* glyph_info = &header->glyphs[character-32];
+		header_kfont_glyph* glyph_info = &glyphs[character-32];
 		glyph_info->character = character;
 
 		u32 target_r = character / HEADER_FONT_GLYPH_R;
@@ -423,25 +386,25 @@ ATLAS_FONT_MAKE(s8* TTF_FILE, s8* FONT_NAME, u64* atlas_size, u32 px, u32 pt)
 		// FIND GLYPH BITMAP POSITION
 		
 		s8* glyph_data =
-		(bytes + (header->width * header->height * 4) - (header->width * header->glyph_height * 4))
+		(bytes + (header->atlas_width * header->atlas_height * 4) - (header->atlas_width * header->charset_max_height * 4))
 		+
-		(header->glyph_width * 4 * target_c)
+		(header->charset_max_width * 4 * target_c)
 		-
-		(header->width * header->glyph_height * 4 * target_r);
+		(header->atlas_width * header->charset_max_height * 4 * target_r);
 
 		// WRITE GLYPH TO BITMAP
 
 		ATLAS_GLYPH_MAKE(glyph_info, glyph_data, 
-			header->glyph_height, 
-			header->width, &max_offset,
+				 header->charset_max_height, 
+				 header->atlas_width, &max_offset,
 				 &font_handle, &device_context, &bitmap_info);
 
 		// SET GLYPH INFO (UV COORDINATES)
 
-		glyph_info->u0 = (target_c * header->glyph_width)/(r32)header->width;
-		glyph_info->v0 = ((((HEADER_FONT_GLYPH_R - 1) - target_r) * header->glyph_height) + glyph_info->height)/(r32)header->height;
-		glyph_info->u1 = ((HEADER_FONT_GLYPH_C * header->glyph_width) + glyph_info->width)/(r32)header->width;
-		glyph_info->v1 = (((HEADER_FONT_GLYPH_R - 1) - target_r) * header->glyph_height)/(r32)header->height;
+		glyph_info->u0 = (target_c * header->charset_max_width)/(r32)header->atlas_width;
+		glyph_info->v0 = ((((HEADER_FONT_GLYPH_R - 1) - target_r) * header->charset_max_height) + glyph_info->height)/(r32)header->atlas_height;
+		glyph_info->u1 = ((HEADER_FONT_GLYPH_C * header->charset_max_width) + glyph_info->width)/(r32)header->atlas_width;
+		glyph_info->v1 = (((HEADER_FONT_GLYPH_R - 1) - target_r) * header->charset_max_height)/(r32)header->atlas_height;
 
 		if(glyph_info->offset > max_offset)
 		{
@@ -451,7 +414,7 @@ ATLAS_FONT_MAKE(s8* TTF_FILE, s8* FONT_NAME, u64* atlas_size, u32 px, u32 pt)
 
 	    for(u32 i = 0; i < HEADER_FONT_GLYPH_COUNT; i++)
 	    {
-		header->glyphs[i].offset = max_offset - header->glyphs[i].offset;
+		glyphs[i].offset = max_offset - glyphs[i].offset;
 	    }
 
 	}
@@ -472,11 +435,11 @@ ATLAS_FONT_MAKE(s8* TTF_FILE, s8* FONT_NAME, u64* atlas_size, u32 px, u32 pt)
     return(header);
 }
 internal void*
-ATLAS_BMP_MAKE(u64* atlas_bmp_size, header_font* font)
+ATLAS_BMP_MAKE(u64* atlas_bmp_size, header_kfont_sub* font)
 {
     bitmap_header* header = 0;
     
-    *atlas_bmp_size = sizeof(bitmap_header) + (font->width * font->height * 4);
+    *atlas_bmp_size = sizeof(bitmap_header) + (font->atlas_width * font->atlas_height * 4);
     
     header = (bitmap_header*)VirtualAlloc(0, *atlas_bmp_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if(header)
@@ -485,14 +448,14 @@ ATLAS_BMP_MAKE(u64* atlas_bmp_size, header_font* font)
 	header->file_size      = *atlas_bmp_size;
 	header->byte_offset    = sizeof(bitmap_header); 
 	header->header_size    = sizeof(BITMAPINFOHEADER); 
-	header->width          = font->width;  
-	header->height         = font->height; 
+	header->width          = font->atlas_width;  
+	header->height         = font->atlas_height; 
 	header->planes         = 1;            
 	header->bits_per_pixel = 32;      
 	header->compression    = BI_RGB;
-	header->image_size     = (font->width * font->height * 4);
+	header->image_size     = (font->atlas_width * font->atlas_height * 4);
 
-	CopyMemory((s8*)header + header->byte_offset, (s8*)font + font->byte_offset, header->image_size);
+	CopyMemory((s8*)header + header->byte_offset, (s8*)font + font->atlas_offset, header->image_size);
     }
 
     return(header);
@@ -570,6 +533,12 @@ ATLAS_TTF_EXTRACTNAME(s8* FONT_FILE,
     return(success);
 }
 
+#define kilobytes(value) (((s64)value)          * 1024LL)
+#define megabytes(value) (kilobytes((s64)value) * 1024LL)
+#define gigabytes(value) (megabytes((s64)value) * 1024LL)
+#define terabytes(value) (gigabytes((s64)value) * 1024LL)
+#define gigabytes(value) (megabytes((s64)value) * 1024LL)
+
 s32 WINAPI
 WinMain (HINSTANCE          instance,
 	 HINSTANCE previous_instance,
@@ -581,85 +550,63 @@ WinMain (HINSTANCE          instance,
     // CONFIG
     
     SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
-    u32 DPI = GetDpiForSystem();
 
-    // EXTRACT FONT NAME AND FAMILY DIRECTLY FROM TTF_FILE
+    // EXTRACT FONT NAME DIRECTLY FROM TTF_FILE
 
     s8 FONT_NAME[MAX_PATH]={}; // FONTNAME\0
     u32 FONT_NAME_SIZE = 0;
 
     if(ATLAS_TTF_EXTRACTNAME(TTF_FILE, FONT_NAME, &FONT_NAME_SIZE))
-    {	
-	for(u32 n = 0; n < FONT_RESOLUTIONS_COUNT; n++)
+    {
+	u64 max_font_size = gigabytes(8);
+
+	header_kfont* header = (header_kfont*)VirtualAlloc(0, max_font_size, MEM_COMMIT, PAGE_READWRITE);
+	header->size = sizeof(header_kfont);
+	header->font_count = FONT_LAYERS;
+	
+	for(u32 n = 0; n < FONT_LAYERS; n++)
 	{
 	    u32 PX_HEIGHT = FONT_RESOLUTIONS[n];
-	    u32 PT_HEIGHT = (72*PX_HEIGHT)/(96*(DPI/(r32)100));
-
-	    s8 CUSTOM_NAME[MAX_PATH] = {};
-	    CopyMemory(CUSTOM_NAME, FONT_NAME, FONT_NAME_SIZE); // FONTNAME
-
-	    //
-	    // PX_HEIGHT = 2160
-	    //
-	    // 2160 / 1000     = 2
-	    // 2160 - (2*1000) = 160
-	    // 160 / 100       = 1
-	    // 160 - (1*100)   = 60
-	    // 60 / 10         = 6
-	    // 60 - (6*10)     = 0
-	    //
-	    // CHAR_PXHEIGHT[0] = '0' + 2   
-	    // CHAR_PXHEIGHT[1] = '0' + 1 
-	    // CHAR_PXHEIGHT[2] = '0' + 6 
-	    // CHAR_PXHEIGHT[3] = '0' + 0
-	    //
-	    // CHAR_PXHEIGHT[] = "2160";
-	    //
-
-	    s8 DIGITS[4] = {};
-	    DIGITS[0] = PX_HEIGHT/1000;
-	    DIGITS[1] = (PX_HEIGHT - (1000*DIGITS[0]))/100;
-	    DIGITS[2] = (PX_HEIGHT - (1000*DIGITS[0]) - (100*DIGITS[1]))/10;
-	    DIGITS[3] = PX_HEIGHT - (1000*DIGITS[0]) - (100*DIGITS[1]) - (10*DIGITS[2]);
-
-	    s8 CHAR_PXHEIGHT[5] = {};
-	    CHAR_PXHEIGHT[0] = '_';
-	    CHAR_PXHEIGHT[1] = '0' + DIGITS[0];
-	    CHAR_PXHEIGHT[2] = '0' + DIGITS[1];
-	    CHAR_PXHEIGHT[3] = '0' + DIGITS[2];
-	    CHAR_PXHEIGHT[4] = '0' + DIGITS[3];
-	    
-	    CopyMemory((s8*)CUSTOM_NAME + FONT_NAME_SIZE, CHAR_PXHEIGHT, 5); // FONTNAME_XXXX
 
 	    u64   atlas_size = 0;
-	    void* atlas = ATLAS_FONT_MAKE(TTF_FILE, FONT_NAME, &atlas_size, PX_HEIGHT, PT_HEIGHT);
+	    void* atlas = ATLAS_FONT_MAKE(TTF_FILE, FONT_NAME, &atlas_size, PX_HEIGHT);
 
-	    u64 atlas_bmp_size = 0;
-	    void* atlas_bmp = ATLAS_BMP_MAKE(&atlas_bmp_size, (header_font*)atlas);
+	    // WRITE -> header_kfont_sub
 
-	    // WRITE .FONT
+	    CopyMemory((s8*)header + header->size, atlas, atlas_size);
 
-	    s8 ATLAS_PATH[MAX_PATH] = {};
-	    CopyMemory(ATLAS_PATH, "..\\build\\", sizeof("..\\build\\")-1); // ../build/
-	    CopyMemory(ATLAS_PATH + sizeof("..\\build\\")-1, CUSTOM_NAME, FONT_NAME_SIZE+5); // ../build/FONTNAME_XXXX
-	    CopyMemory(ATLAS_PATH + sizeof("..\\build\\")-1 + (FONT_NAME_SIZE+5), ".font", sizeof(".kfont")); // ../build/FONTNAME_XXXX.font
+	    header->size += atlas_size;
+
+	    if(n == (FONT_LAYERS-1)) // WRITE .BMP
+	    {
+		u64 atlas_bmp_size = 0;
+		void* atlas_bmp = ATLAS_BMP_MAKE(&atlas_bmp_size, (header_kfont_sub*)atlas);
 	    
-	    io_writefile(ATLAS_PATH, atlas_size, atlas);
+		s8 ATLAS_BMP_PATH[MAX_PATH] = {};
+
+		CopyMemory(ATLAS_BMP_PATH, "..\\build\\", sizeof("..\\build\\")-1); // ../build/
+		CopyMemory(ATLAS_BMP_PATH + sizeof("..\\build\\")-1, FONT_NAME, FONT_NAME_SIZE); // ../build/FONTNAME
+		CopyMemory(ATLAS_BMP_PATH + sizeof("..\\build\\")-1 + FONT_NAME_SIZE, ".bmp", sizeof(".bmp")); // ../build/FONTNAME_XXXX.bmp
+	    
+		io_writefile(ATLAS_BMP_PATH, atlas_bmp_size, atlas_bmp);
+
+		VirtualFree(atlas_bmp, 0, MEM_RELEASE);
+	    }
 
 	    VirtualFree(atlas, 0, MEM_RELEASE);
-
-	    // WRITE .BMP
-
-	    s8 ATLAS_BMP_PATH[MAX_PATH] = {};
-
-	    CopyMemory(ATLAS_BMP_PATH, "..\\build\\", sizeof("..\\build\\")-1); // ../build/
-	    CopyMemory(ATLAS_BMP_PATH + sizeof("..\\build\\")-1, CUSTOM_NAME, FONT_NAME_SIZE+5); // ../build/FONTNAME_XXXX
-	    CopyMemory(ATLAS_BMP_PATH + sizeof("..\\build\\")-1 + (FONT_NAME_SIZE+5), ".bmp", sizeof(".bmp")); // ../build/FONTNAME_XXXX.bmp
 	    
-	    io_writefile(ATLAS_BMP_PATH, atlas_bmp_size, atlas_bmp);
-
-	    VirtualFree(atlas_bmp, 0, MEM_RELEASE);
 	}
+
+	// WRITE .FONT
+
+	s8 FONT_PATH[MAX_PATH] = {};
+	CopyMemory(FONT_PATH, "..\\build\\", sizeof("..\\build\\")-1); // ../build/
+	CopyMemory(FONT_PATH + sizeof("..\\build\\")-1, FONT_NAME, FONT_NAME_SIZE); // ../build/FONTNAME
+	CopyMemory(FONT_PATH + sizeof("..\\build\\")-1 + FONT_NAME_SIZE, ".kfont", sizeof(".kfont")); // ../build/FONTNAME.kfont
+	    
+	io_writefile(FONT_PATH, header->size, header);
+
+	VirtualFree(header, 0, MEM_RELEASE);
     }
     else
     {
